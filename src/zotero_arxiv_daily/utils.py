@@ -1,6 +1,7 @@
 import tarfile
 import re
 import glob
+import ssl
 import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
@@ -104,13 +105,19 @@ def send_email(config:DictConfig, html:str):
     today = datetime.datetime.now().strftime('%Y/%m/%d')
     msg['Subject'] = Header(f'Daily arXiv {today}', 'utf-8').encode()
 
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     try:
         server = smtplib.SMTP_SSL(smtp_server, smtp_port)
     except Exception as e:
         logger.debug(f"Failed to use SSL. {e}\nTry to use TLS.")
         try:
             server = smtplib.SMTP(smtp_server, smtp_port)
-            server.starttls()
+            server.ehlo()
+            server.starttls(context=ssl_context)
+            server.ehlo()
         except Exception as e:
             logger.debug(f"Failed to use TLS. {e}\nTry to use plain text.")
             server = smtplib.SMTP(smtp_server, smtp_port)
