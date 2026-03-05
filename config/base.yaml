@@ -25,7 +25,7 @@ llm:
   generation_kwargs:
   # Arguments for the LLM API. See [here](https://platform.openai.com/docs/api-reference/chat/create) for more details.
     max_tokens: 16384
-    model: ???
+    model: ??? # The LLM model name supported by your API provider. For SiliconFlow: Qwen/Qwen2.5-7B-Instruct. For OpenAI: gpt-4o-mini.
   language: English # Preferred language for the TL;DR. Example: English
 
 reranker:

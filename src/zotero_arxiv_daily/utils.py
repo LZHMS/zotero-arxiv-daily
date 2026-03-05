@@ -104,17 +104,35 @@ def send_email(config:DictConfig, html:str):
     today = datetime.datetime.now().strftime('%Y/%m/%d')
     msg['Subject'] = Header(f'Daily arXiv {today}', 'utf-8').encode()
 
+    server = None
     try:
         server = smtplib.SMTP_SSL(smtp_server, smtp_port)
     except Exception as e:
         logger.debug(f"Failed to use SSL. {e}\nTry to use TLS.")
+
+    if server is None:
         try:
             server = smtplib.SMTP(smtp_server, smtp_port)
+            server.ehlo()
             server.starttls()
+            server.ehlo()
         except Exception as e:
             logger.debug(f"Failed to use TLS. {e}\nTry to use plain text.")
+            try:
+                server.quit()
+            except (smtplib.SMTPServerDisconnected, smtplib.SMTPException, OSError):
+                pass
             server = smtplib.SMTP(smtp_server, smtp_port)
 
-    server.login(sender, password)
+    try:
+        server.login(sender, password)
+    except smtplib.SMTPNotSupportedError:
+        logger.debug("SMTP server does not support AUTH, skipping login.")
+    except smtplib.SMTPServerDisconnected as e:
+        raise RuntimeError(
+            f"Connection to SMTP server {smtp_server}:{smtp_port} was unexpectedly closed during "
+            "authentication. Please verify your smtp_server, smtp_port, sender, and "
+            "sender_password settings. If using port 465, ensure your provider supports implicit SSL."
+        ) from e
     server.sendmail(sender, [receiver], msg.as_string())
     server.quit()
